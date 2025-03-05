@@ -99,6 +99,27 @@ uvicorn nook.api.main:app --reload
 
 # フロントエンドの起動（別ターミナルで）
 python -m streamlit run nook/frontend/app.py
+
+# 一括起動（バックエンドとフロントエンドを同時に起動）
+python scripts/run_app.py
+# または
+./scripts/run_app.py
+
+# 一括起動のオプション
+python scripts/run_app.py --help  # ヘルプを表示
+python scripts/run_app.py --api-port 8080 --frontend-port 8000  # ポートを変更して起動
+python scripts/run_app.py --no-reload  # 自動リロードなしで起動
+python scripts/run_app.py --backend-only  # バックエンドのみを起動
+python scripts/run_app.py --frontend-only  # フロントエンドのみを起動
+python scripts/run_app.py --daemon  # バックグラウンドで起動（ログ表示なし）
+nohup python scripts/run_app.py --daemon --log-file logs/nook.log & # バックグラウンドで起動（ログをファイルに出力）
+
+# バックグラウンドで起動したアプリケーションの停止
+python scripts/stop_app.py  # デフォルトのPIDファイル(nook_app.pid)を使用
+python scripts/stop_app.py --pid-file custom_pid_file.pid  # カスタムPIDファイルを指定
+
+ps u
+kill -KILL PID
 ```
 
 ## 情報の取得手順

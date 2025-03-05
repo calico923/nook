@@ -20,3 +20,6 @@ venv
 .cursorignore
 
 data
+
+nohup.out
+nook_app.pid
