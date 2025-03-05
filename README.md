@@ -136,6 +136,18 @@ python -m nook.services.run_services --service hackernews
 python -m nook.services.run_services --service github
 python -m nook.services.run_services --service techfeed
 python -m nook.services.run_services --service paper
+
+# 日次更新スクリプトを使用して実行
+python scripts/daily_update.py  # すべてのサービスを実行
+python scripts/daily_update.py --service reddit  # 特定のサービスのみ実行
+python scripts/daily_update.py --log-file custom_log.log  # ログファイルを指定
+
+# 毎日午前9時に自動実行するように設定
+## Linux/Unix (cron)
+./scripts/setup_cron.sh
+
+## macOS (launchd)
+./scripts/setup_cron_mac.sh
 ```
 
 ### データの保存場所
