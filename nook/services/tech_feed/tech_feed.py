@@ -421,8 +421,9 @@ class TechFeed:
         
         文章は以下のルールを守って日本語で回答してください。
         ・冒頭文は記事がどんな内容の話かがわかるよう末尾を「〜話。」にする。
-        ・冒頭文以降の文章はこの話で最も重要なポイントを初心者でもわかるようにする。
+        ・冒頭文以降の文章はこの話で最も重要なポイントを1つピックアップして第三者に説明するようにする。
         ・箇条書きはしない。
+        ・全体の流れを維持しながら、より自然な文章にする。
         """
 
         system_instruction = """
@@ -484,15 +485,11 @@ class TechFeed:
             file_path = contents_dir / f"{today.strftime('%Y-%m-%d')}.md"
             print(f"保存先ファイルパス: {file_path}")
             
-            # Markdownファイルの作成
-            content = f"# SNS投稿文 ({today.strftime('%Y-%m-%d')})\n\n"
+            # シンプルなテキスト形式でファイルを作成
+            content = ""
             
             for post in posts:
-                content += f"## {post['title']}\n\n"
-                content += f"- URL: {post['url']}\n"
-                content += f"- 文字数: {post['char_count']}\n\n"
-                content += f"```\n{post['content']}\n```\n\n"
-                content += "---\n\n"
+                content += f"{post['content'].strip()} {post['url']}\n\n---\n\n"
             
             # ファイルに保存
             file_path.parent.mkdir(parents=True, exist_ok=True)  # 親ディレクトリを作成
