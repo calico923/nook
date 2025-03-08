@@ -102,7 +102,7 @@ def test_article_summary_generation(tech_feed):
         
         # 投稿文生成の呼び出しを確認
         social_post_call = call_args[1][1]
-        assert "190文字から200文字の範囲" in social_post_call['prompt']
+        assert "180-200文字の範囲" in social_post_call['prompt']
         print(f"\n生成された投稿文: {article.social_post}")
         print(f"投稿文の文字数: {len(article.social_post)}")
 
