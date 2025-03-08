@@ -489,6 +489,7 @@ class TechFeed:
             content = ""
             
             for post in posts:
+                # 投稿文とURLを1行に結合し、余分な空白を削除
                 content += f"{post['content'].strip()} {post['url']}\n\n---\n\n"
             
             # ファイルに保存
