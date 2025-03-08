@@ -1,5 +1,6 @@
 """技術ブログのRSSフィードを監視・収集・要約するサービス。"""
 
+import os
 import tomli
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
@@ -9,6 +10,7 @@ from typing import List, Optional
 import feedparser
 import requests
 from bs4 import BeautifulSoup
+from dotenv import load_dotenv
 
 from nook.common.grok_client import Grok3Client
 from nook.common.storage import LocalStorage
@@ -71,6 +73,9 @@ class TechFeed:
         storage_dir : str, default="data"
             ストレージディレクトリのパス。
         """
+        # .envファイルを読み込む
+        load_dotenv()
+        
         self.storage = LocalStorage(storage_dir)
         self.grok_client = Grok3Client()
         
@@ -133,7 +138,7 @@ class TechFeed:
                     'char_count': article.social_post_char_count
                 }
                 for article in all_articles
-                if article.social_post and 247 <= article.social_post_char_count <= 257
+                if article.social_post  # 投稿文が生成されている記事のみ
             ]
             
             if social_posts:
@@ -405,7 +410,8 @@ class TechFeed:
         Returns
         -------
         str
-            生成された投稿用文章（247-257文字）。
+            生成された投稿用文章。文字数制限は247-257文字をGrokに指示しますが、
+            出力の文字数チェックは行いません。
         """
         prompt = f"""
         以下の技術ブログの記事から247文字から257文字以内で文章を作成してください。
@@ -434,11 +440,9 @@ class TechFeed:
                 max_tokens=1000
             )
 
-            # 文字数チェック
+            # 文字数をカウント（情報提供のみ）
             char_count = len(social_post)
-            if not (247 <= char_count <= 257):
-                print(f"Warning: Generated post length ({char_count} chars) is outside the limit (247-257 chars)")
-                return ""
+            print(f"Generated post length: {char_count} chars")
 
             # 冒頭文チェック
             first_sentence = social_post.split('。')[0] + '。'
@@ -472,10 +476,13 @@ class TechFeed:
             
             # 保存先ディレクトリの作成
             contents_dir = Path(os.getenv('CONTENTS_DIR', 'contents'))
+            print(f"CONTENTS_DIR環境変数: {os.getenv('CONTENTS_DIR')}")
+            print(f"保存先ディレクトリ: {contents_dir}")
             contents_dir.mkdir(parents=True, exist_ok=True)
             
             # ファイル名の生成
             file_path = contents_dir / f"{today.strftime('%Y-%m-%d')}.md"
+            print(f"保存先ファイルパス: {file_path}")
             
             # Markdownファイルの作成
             content = f"# SNS投稿文 ({today.strftime('%Y-%m-%d')})\n\n"
@@ -488,10 +495,15 @@ class TechFeed:
                 content += "---\n\n"
             
             # ファイルに保存
-            with open(file_path, 'w', encoding='utf-8') as f:
-                f.write(content)
+            file_path.parent.mkdir(parents=True, exist_ok=True)  # 親ディレクトリを作成
+            file_path.write_text(content, encoding='utf-8')
             
             print(f"Social posts saved to: {file_path}")
             
         except Exception as e:
-            print(f"Error storing social posts: {str(e)}") 
+            print(f"Error storing social posts: {str(e)}")
+
+
+if __name__ == "__main__":
+    tech_feed = TechFeed()
+    tech_feed.run(days=1, limit=3) 
