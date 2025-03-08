@@ -33,6 +33,12 @@ class Article:
         BeautifulSoupオブジェクト。
     category : str | None
         カテゴリ。
+    summary : str
+        記事の要約。
+    social_post : str
+        SNS投稿用の文章。
+    social_post_char_count : int
+        SNS投稿用文章の文字数。
     """
     
     feed_name: str
@@ -42,6 +48,8 @@ class Article:
     soup: BeautifulSoup
     category: Optional[str] = None
     summary: str = field(default="")
+    social_post: str = field(default="")
+    social_post_char_count: int = field(default=0)
 
 
 class TechFeed:
@@ -115,6 +123,24 @@ class TechFeed:
         if all_articles:
             self._store_summaries(all_articles)
             print(f"記事の要約を保存しました")
+
+            # 投稿文を保存
+            social_posts = [
+                {
+                    'url': article.url,
+                    'title': article.title,
+                    'content': article.social_post,
+                    'char_count': article.social_post_char_count
+                }
+                for article in all_articles
+                if article.social_post and 247 <= article.social_post_char_count <= 257
+            ]
+            
+            if social_posts:
+                self._store_social_posts(social_posts)
+                print(f"{len(social_posts)} 件の投稿文を保存しました")
+            else:
+                print("保存する投稿文がありません")
         else:
             print("保存する記事がありません")
     
@@ -264,13 +290,14 @@ class TechFeed:
     
     def _summarize_article(self, article: Article) -> None:
         """
-        記事を要約します。
+        記事を要約し、SNS投稿用の文章を生成します。
         
         Parameters
         ----------
         article : Article
             要約する記事。
         """
+        # 要約の生成
         prompt = f"""
         以下の技術ブログの記事を要約してください。
 
@@ -291,6 +318,7 @@ class TechFeed:
         """
         
         try:
+            # 要約を生成
             summary = self.grok_client.generate_content(
                 prompt=prompt,
                 system_instruction=system_instruction,
@@ -298,8 +326,18 @@ class TechFeed:
                 max_tokens=1000
             )
             article.summary = summary
+
+            # SNS投稿用の文章を生成
+            social_post = self._create_social_post(article)
+            if social_post:
+                article.social_post = social_post
+                article.social_post_char_count = len(social_post)
+            else:
+                print(f"Warning: Failed to generate valid social post for article: {article.url}")
+
         except Exception as e:
             article.summary = f"要約の生成中にエラーが発生しました: {str(e)}"
+            print(f"Error summarizing article: {str(e)}")
     
     def _store_summaries(self, articles: List[Article]) -> None:
         """
@@ -352,4 +390,108 @@ class TechFeed:
                     f.write(content)
                 print(f"再試行で保存に成功しました: {file_path}")
             except Exception as e2:
-                print(f"再試行でも保存に失敗しました: {str(e2)}") 
+                print(f"再試行でも保存に失敗しました: {str(e2)}")
+
+    def _create_social_post(self, article: Article) -> str:
+        """
+        記事からSNS投稿用の文章を生成する。
+
+        Parameters
+        ----------
+        article : Article
+            投稿文を生成する記事。
+            article.titleとarticle.textを使用。
+
+        Returns
+        -------
+        str
+            生成された投稿用文章（247-257文字）。
+        """
+        prompt = f"""
+        以下の技術ブログの記事から247文字から257文字以内で文章を作成してください。
+
+        タイトル: {article.title}
+        本文: {article.text[:2000]}
+        
+        文章は以下のルールを守って日本語で回答してください。
+        ・冒頭文は記事がどんな内容の話かがわかるよう末尾を「〜話。」にする。
+        ・冒頭文以降の文章はこの話で最も重要なポイントを初心者でもわかるようにする。
+        ・箇条書きはしない。
+        """
+
+        system_instruction = """
+        あなたは技術ブログの記事の内容からXの投稿を行うアシスタントです。
+        与えられた記事を分析し、簡潔で情報量の多い文章を作成してください。
+        技術的な内容は正確に、一般的な内容は分かりやすく説明してください。
+        回答は必ず日本語で行ってください。専門用語は適切に翻訳し、必要に応じて英語の専門用語を括弧内に残してください。
+        """
+
+        try:
+            social_post = self.grok_client.generate_content(
+                prompt=prompt,
+                system_instruction=system_instruction,
+                temperature=0.3,
+                max_tokens=1000
+            )
+
+            # 文字数チェック
+            char_count = len(social_post)
+            if not (247 <= char_count <= 257):
+                print(f"Warning: Generated post length ({char_count} chars) is outside the limit (247-257 chars)")
+                return ""
+
+            # 冒頭文チェック
+            first_sentence = social_post.split('。')[0] + '。'
+            if not first_sentence.endswith('話。'):
+                print(f"Warning: First sentence does not end with '話。': {first_sentence}")
+                return ""
+
+            return social_post
+
+        except Exception as e:
+            print(f"Error generating social post: {str(e)}")
+            return ""
+
+    def _store_social_posts(self, posts: List[dict]) -> None:
+        """
+        生成された投稿用文章を保存する。
+
+        Parameters
+        ----------
+        posts : List[dict]
+            投稿情報のリスト。各要素は以下の形式:
+            {
+                'url': str,
+                'title': str,
+                'content': str,
+                'char_count': int  # 文字数
+            }
+        """
+        try:
+            today = datetime.now()
+            
+            # 保存先ディレクトリの作成
+            contents_dir = Path(os.getenv('CONTENTS_DIR', 'contents'))
+            contents_dir.mkdir(parents=True, exist_ok=True)
+            
+            # ファイル名の生成
+            file_path = contents_dir / f"{today.strftime('%Y-%m-%d')}.md"
+            
+            # Markdownファイルの作成
+            content = f"# SNS投稿文 ({today.strftime('%Y-%m-%d')})\n\n"
+            
+            for post in posts:
+                content += f"## {post['title']}\n\n"
+                content += f"- URL: {post['url']}\n"
+                content += f"- 文字数: {post['char_count']}\n\n"
+                content += f"```\n{post['content']}\n```\n\n"
+                content += "---\n\n"
+            
+            # ファイルに保存
+            with open(file_path, 'w', encoding='utf-8') as f:
+                f.write(content)
+            
+            print(f"Social posts saved to: {file_path}")
+            
+        except Exception as e:
+            print(f"Error storing social posts: {str(e)}") 
