@@ -134,8 +134,7 @@ class TechFeed:
                 {
                     'url': article.url,
                     'title': article.title,
-                    'content': article.social_post,
-                    'char_count': article.social_post_char_count
+                    'content': article.social_post
                 }
                 for article in all_articles
                 if article.social_post  # 投稿文が生成されている記事のみ
@@ -336,7 +335,6 @@ class TechFeed:
             social_post = self._create_social_post(article)
             if social_post:
                 article.social_post = social_post
-                article.social_post_char_count = len(social_post)
             else:
                 print(f"Warning: Failed to generate valid social post for article: {article.url}")
 
@@ -419,12 +417,13 @@ class TechFeed:
 
         # ルール
         X投稿用文は以下のルールを守って日本語で回答してください。
-        ・X投稿用文は必ず190文字から200文字の範囲で文章を作成します。
-        ・最初の一文は「この記事は」から始め、終わりは「を解説。」です。
-        ・冒頭文は記事の内容を50文字以下で簡潔に説明します。
-        ・冒頭文以降の文章は本文で最も重要なポイントを第三者に説明します。
-        ・最後の文の終わりは「説明しています。」です。
-        ・箇条書きはしません。技術ブログの記事
+            ・X投稿用文は【必ず190-200文字の範囲内】で作成すること
+            ・X投稿用文は【3文】で作成すること
+            ・最初の一文は【必ず「自分用メモ。」】と作成すること           
+            ・2番目の文は【「この記事は」から始め、その文は「を解説。」】で終わること
+            ・3番目の文は【「最も重要なポイントは」】ではじめ、記事で最も重要なポイントを説明し、【と説明している。】で終わること
+            ・箇条書きは使用しないこと
+            ・作成後、必ず文字数をカウントして180-200文字の範囲内であることを確認すること
 
         # 技術ブログの記事
                 タイトル: {article.title}
@@ -446,16 +445,6 @@ class TechFeed:
                 max_tokens=1000
             )
 
-            # 文字数をカウント（情報提供のみ）
-            char_count = len(social_post)
-            print(f"Generated post length: {char_count} chars")
-
-            # 冒頭文チェック
-            first_sentence = social_post.split('。')[0] + '。'
-            if not first_sentence.endswith('話。'):
-                print(f"Warning: First sentence does not end with '話。': {first_sentence}")
-                return ""
-
             return social_post
 
         except Exception as e:
@@ -473,8 +462,7 @@ class TechFeed:
             {
                 'url': str,
                 'title': str,
-                'content': str,
-                'char_count': int  # 文字数
+                'content': str
             }
         """
         try:
@@ -482,13 +470,10 @@ class TechFeed:
             
             # 保存先ディレクトリの作成
             contents_dir = Path(os.getenv('CONTENTS_DIR', 'contents'))
-            print(f"CONTENTS_DIR環境変数: {os.getenv('CONTENTS_DIR')}")
-            print(f"保存先ディレクトリ: {contents_dir}")
             contents_dir.mkdir(parents=True, exist_ok=True)
             
             # ファイル名の生成
             file_path = contents_dir / f"{today.strftime('%Y-%m-%d')}.md"
-            print(f"保存先ファイルパス: {file_path}")
             
             # シンプルなテキスト形式でファイルを作成
             content = ""
@@ -501,8 +486,6 @@ class TechFeed:
             # ファイルに保存
             file_path.parent.mkdir(parents=True, exist_ok=True)  # 親ディレクトリを作成
             file_path.write_text(content, encoding='utf-8')
-            
-            print(f"Social posts saved to: {file_path}")
             
         except Exception as e:
             print(f"Error storing social posts: {str(e)}")
