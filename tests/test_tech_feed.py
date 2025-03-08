@@ -50,10 +50,14 @@ def mock_storage(tmp_path):
 @pytest.fixture
 def tech_feed(mock_storage):
     """TechFeedインスタンスを作成するフィクスチャ。"""
-    with patch('nook.services.tech_feed.tech_feed.tomli.load') as mock_load:
+    with patch('nook.services.tech_feed.tech_feed.tomli.load') as mock_load, \
+         patch('nook.services.tech_feed.tech_feed.Grok3Client') as mock_grok:
         mock_load.return_value = {
             'test_category': ['https://example.com/feed']
         }
+        # Grok3Clientのモックを設定
+        mock_grok_instance = MagicMock()
+        mock_grok.return_value = mock_grok_instance
         return TechFeed(storage_dir=str(mock_storage))
 
 def test_article_summary_generation(tech_feed):

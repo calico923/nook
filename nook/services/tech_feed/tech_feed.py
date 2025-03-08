@@ -414,8 +414,8 @@ class TechFeed:
             出力の文字数チェックは行いません。
         """
         prompt = f"""
-        以下の技術ブログの記事から247文字から257文字以内で文章を作成してください。
-
+        以下の技術ブログの記事から247文字から257文字以内で全体の流れを維持しながら、自然な文章を作成してください。
+        
         タイトル: {article.title}
         本文: {article.text[:2000]}
         
@@ -423,7 +423,6 @@ class TechFeed:
         ・冒頭文は記事がどんな内容の話かがわかるよう末尾を「〜話。」にする。
         ・冒頭文以降の文章はこの話で最も重要なポイントを1つピックアップして第三者に説明するようにする。
         ・箇条書きはしない。
-        ・全体の流れを維持しながら、より自然な文章にする。
         """
 
         system_instruction = """
@@ -489,8 +488,9 @@ class TechFeed:
             content = ""
             
             for post in posts:
-                # 投稿文とURLを1行に結合し、余分な空白を削除
-                content += f"{post['content'].strip()} {post['url']}\n\n---\n\n"
+                # 投稿文から余計な改行と空白を削除し、URLと結合
+                cleaned_content = ' '.join(post['content'].split())  # 複数の空白を1つに置換し、改行も削除
+                content += f"{cleaned_content} {post['url']}\n---\n"
             
             # ファイルに保存
             file_path.parent.mkdir(parents=True, exist_ok=True)  # 親ディレクトリを作成
