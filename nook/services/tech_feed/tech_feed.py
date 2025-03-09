@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import List, Optional
+import re
 
 import feedparser
 import requests
@@ -142,7 +143,7 @@ class TechFeed:
             
             if social_posts:
                 self._store_social_posts(social_posts)
-                print(f"{len(social_posts)} 件の投稿文を保存しました")
+                print(f"{len(social_posts)} 件のSNS用投稿文を保存しました")
             else:
                 print("保存する投稿文がありません")
         else:
@@ -423,7 +424,7 @@ class TechFeed:
             ・2番目の文は【「この記事は」から始め、その文は「を解説。」】で終わること
             ・3番目の文は【「最も重要なポイントは」】ではじめ、記事で最も重要なポイントを説明し、【と説明している。】で終わること
             ・箇条書きは使用しないこと
-            ・作成後、必ず文字数をカウントして180-200文字の範囲内であることを確認すること
+            ・文字数カウントは出力に含めないこと
 
         # 技術ブログの記事
                 タイトル: {article.title}
@@ -481,7 +482,8 @@ class TechFeed:
             for post in posts:
                 # 投稿文から余計な改行と空白を削除し、URLと結合
                 cleaned_content = ' '.join(post['content'].split())  # 複数の空白を1つに置換し、改行も削除
-                content += f"{cleaned_content} {post['url']}\n---\n"
+                cleaned_content = re.sub('。\\s', '。', cleaned_content)  # 句点の後の空白を削除（正規表現）
+                content += f"{cleaned_content} #AI #Tech {post['url']}\n---\n"
             
             # ファイルに保存
             file_path.parent.mkdir(parents=True, exist_ok=True)  # 親ディレクトリを作成
